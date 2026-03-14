@@ -1,0 +1,42 @@
+services:
+  api:
+    build: .
+    image: ci-cd-example-app-api
+    environment:
+      - APP_API_LIMIT=${APP_API_LIMIT}
+      - APP_API_TIMEOUT=${APP_API_TIMEOUT}
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "v=$$(curl -sf http://localhost:8080/work/status) && [ -n \"$$v\" ] && [ \"$$v\" -le \"$$APP_API_LIMIT\" ]",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=PathPrefix(`/`)"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      
+      
+  traefik:
+    image: traefik:v3.2
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - "traefik.http.middlewares.test-retry.retry.attempts=1000"
+      - "traefik.http.middlewares.test-retry.retry.initialinterval=1ms"
