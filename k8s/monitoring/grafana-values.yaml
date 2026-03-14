@@ -1,0 +1,39 @@
+adminUser: admin
+adminPassword: u6HGMqVA0lY37yVcXaSRDtpjJmxD1wnpDuz1un0n%
+
+service:
+  type: ClusterIP
+  port: 80
+
+persistence:
+  enabled: true
+  type: pvc
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+  finalizers:
+    - kubernetes.io/pvc-protection
+initChownData:
+  enabled: false
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts:
+    - grafana.work.local
+  path: /
+  pathType: Prefix
+
+# Опционально: сразу преднастроить Prometheus datasource (чтобы не добавлять руками в UI)
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+        isDefault: true
+        editable: true

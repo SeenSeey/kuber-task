@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ci-cd-example-app
+  labels:
+    app: ci-cd-example-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ci-cd-example-app
+  template:
+    metadata:
+      labels:
+        app: ci-cd-example-app
+    spec:
+      containers:
+        - name: app
+          image: ci-cd-example-app:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_API_LIMIT
+              value: "70"
+            - name: APP_API_TIMEOUT
+              value: "600"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /work/status
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /work/status
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5

@@ -6,10 +6,13 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import jakarta.annotation.PostConstruct;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
@@ -22,12 +25,22 @@ public class WorkResource {
   static List<String> syncList = Collections.synchronizedList(new ArrayList<>());
   int apiLimit;
   int timeout;
+  private final MeterRegistry meterRegistry;
 
   public WorkResource(
+      MeterRegistry meterRegistry,
       @ConfigProperty(name = "app.api.limit") int apiLimit,
       @ConfigProperty(name = "app.api.timeout") int timeout) {
+    this.meterRegistry = meterRegistry;
     this.apiLimit = apiLimit;
     this.timeout = timeout;
+  }
+
+  @PostConstruct
+  void registerMetrics() {
+    Gauge.builder("work_active_requests", syncList, List::size)
+        .description("Number of active work requests in progress")
+        .register(meterRegistry);
   }
 
   @GET

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ci-cd-example-app
+  annotations:
+    nginx.ingress.kubernetes.io/default-backend: "ci-cd-example-app"
+  # labels:
+  #   app: ci-cd-example-app
+spec:
+  ingressClassName: nginx
+  defaultBackend:
+    service:
+      name: ci-cd-example-app
+      port:
+        number: 80
+  # rules:
+  #   - host: work.local
+  #     http:
+  #       paths:
+  #         - path: /
+  #           pathType: Prefix
+  #           backend:
+  #             service:
+  #               name: ci-cd-example-app
+  #               port:
+  #                 number: 80

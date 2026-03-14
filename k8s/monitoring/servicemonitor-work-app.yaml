@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: work-app
+  namespace: default
+  labels:
+    app: work-app
+spec:
+  selector:
+    matchLabels:
+      app: ci-cd-example-app
+  namespaceSelector:
+    matchNames:
+      - default
+  endpoints:
+    - port: http
+      path: /q/metrics
+      interval: 30s
+      scheme: http

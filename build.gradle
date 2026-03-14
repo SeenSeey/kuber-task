@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'io.quarkus' version '3.32.0.CR1'
+    id 'io.quarkus' version '3.31.0'
     id 'com.diffplug.spotless' version "8.2.1"
 }
 
@@ -12,15 +12,16 @@ repositories {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 dependencies {
-    implementation enforcedPlatform("io.quarkus:quarkus-bom:3.32.0.CR1")
+    implementation enforcedPlatform("io.quarkus:quarkus-bom:3.31.0")
     implementation 'io.quarkus:quarkus-rest'
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-smallrye-openapi'
+    implementation 'io.quarkus:quarkus-micrometer-registry-prometheus'
 
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
