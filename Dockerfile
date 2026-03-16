@@ -12,6 +12,8 @@ ENV GRADLE_OPTS="-Dhttps.protocols=TLSv1.2,TLSv1.3"
 
 # 1) Копируем только файлы, влияющие на резолв зависимостей, чтобы улучшить кэш слоев.
 COPY --chown=quarkus:quarkus --chmod=755 gradlew /project/gradlew
+# Исправление окончаний строк (CRLF → LF) при клонировании на Windows.
+RUN sed -i 's/\r$//' /project/gradlew
 COPY --chown=quarkus:quarkus gradle /project/gradle
 COPY --chown=quarkus:quarkus settings.gradle build.gradle gradle.properties /project/
 RUN ./gradlew --no-daemon dependencies || true

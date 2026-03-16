@@ -12,7 +12,7 @@ spec:
     service:
       name: ci-cd-example-app
       port:
-        number: 80
+        number: 8080
   # rules:
   #   - host: work.local
   #     http:
@@ -20,7 +20,7 @@ spec:
   #         - path: /
   #           pathType: Prefix
   #           backend:
-  #             service:
-  #               name: ci-cd-example-app
-  #               port:
-  #                 number: 80
+#             service:
+#               name: ci-cd-example-app
+#               port:
+#                 number: 8080

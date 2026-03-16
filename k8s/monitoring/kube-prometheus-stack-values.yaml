@@ -2,3 +2,14 @@ prometheus:
   prometheusSpec:
     serviceMonitorSelectorNilUsesHelmValues: false
     serviceMonitorNamespaceSelector: {}
+  service:
+    type: NodePort
+    nodePort: 30090
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - prometheus.work.local
+    paths:
+      - /
+    pathType: Prefix
