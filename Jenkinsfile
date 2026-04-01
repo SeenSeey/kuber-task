@@ -29,17 +29,37 @@ pipeline {
             }
         }
 
+        stage('Prepare Docker Config') {
+            steps {
+                sh """
+                    # Writer config
+                    mkdir -p /tmp/docker-writer
+                    WRITER_PASS=\$(cat ${SECRETS_PATH}/writer-pass.txt)
+                    AUTH_WRITER=\$(echo -n "writer:\$WRITER_PASS" | base64 -w 0)
+                    echo '{"auths":{"${REGISTRY}":{"auth":"'\$AUTH_WRITER'"}}}' > /tmp/docker-writer/config.json
+
+                    # Reader config
+                    mkdir -p /tmp/docker-reader
+                    READER_PASS=\$(cat ${SECRETS_PATH}/reader-pass.txt)
+                    AUTH_READER=\$(echo -n "reader:\$READER_PASS" | base64 -w 0)
+                    echo '{"auths":{"${REGISTRY}":{"auth":"'\$AUTH_READER'"}}}' > /tmp/docker-reader/config.json
+                """
+            }
+        }
+
         stage('Pull cache layers') {
             steps {
                 sh """
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
                       -H ${DOCKER_HOST} \
                       pull ${REGISTRY}/${IMAGE_NAME}:builder || true
 
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
@@ -52,14 +72,8 @@ pipeline {
         stage('Build') {
             steps {
                 sh """
-                    cat ${SECRETS_PATH}/writer-pass.txt | docker --tlsverify \
-                      --tlscacert=${SECRETS_PATH}/ca.pem \
-                      --tlscert=${SECRETS_PATH}/client.crt \
-                      --tlskey=${SECRETS_PATH}/client.key \
-                      -H ${DOCKER_HOST} \
-                      login --username writer --password-stdin ${REGISTRY}
-
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
@@ -70,7 +84,8 @@ pipeline {
                       -t ${REGISTRY}/${IMAGE_NAME}:builder \
                       .
 
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
@@ -88,28 +103,24 @@ pipeline {
         stage('Push') {
             steps {
                 sh """
-                    cat ${SECRETS_PATH}/writer-pass.txt | docker --tlsverify \
-                      --tlscacert=${SECRETS_PATH}/ca.pem \
-                      --tlscert=${SECRETS_PATH}/client.crt \
-                      --tlskey=${SECRETS_PATH}/client.key \
-                      -H ${DOCKER_HOST} \
-                      login --username writer --password-stdin ${REGISTRY}
-
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
                       -H ${DOCKER_HOST} \
                       push ${REGISTRY}/${IMAGE_NAME}:builder
 
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
                       -H ${DOCKER_HOST} \
                       push ${REGISTRY}/${IMAGE_NAME}:${BUILD_NUMBER}
 
-                    docker --tlsverify \
+                    docker --config /tmp/docker-writer \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
@@ -122,14 +133,8 @@ pipeline {
         stage('Verify Reader Pull') {
             steps {
                 sh """
-                    cat ${SECRETS_PATH}/reader-pass.txt | docker --tlsverify \
-                      --tlscacert=${SECRETS_PATH}/ca.pem \
-                      --tlscert=${SECRETS_PATH}/client.crt \
-                      --tlskey=${SECRETS_PATH}/client.key \
-                      -H ${DOCKER_HOST} \
-                      login --username reader --password-stdin ${REGISTRY}
-
-                    docker --tlsverify \
+                    docker --config /tmp/docker-reader \
+                      --tlsverify \
                       --tlscacert=${SECRETS_PATH}/ca.pem \
                       --tlscert=${SECRETS_PATH}/client.crt \
                       --tlskey=${SECRETS_PATH}/client.key \
@@ -145,12 +150,7 @@ pipeline {
     post {
         always {
             sh """
-                docker --tlsverify \
-                --tlscacert=/opt/vault-agent/secrets/ca.pem \
-                --tlscert=/opt/vault-agent/secrets/client.crt \
-                --tlskey=/opt/vault-agent/secrets/client.key \
-                -H tcp://172.17.0.1:2376 \
-                logout 172.17.0.1:5000 || true
+                rm -rf /tmp/docker-writer /tmp/docker-reader || true
             """
         }
     }
