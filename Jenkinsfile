@@ -22,6 +22,7 @@ pipeline {
             steps {
                 script {
                     sh """
+                    set +x
                         curl -sk \
                           -X POST \
                           -d '{"role_id":"${VAULT_ROLE_ID}","secret_id":"${VAULT_SECRET_ID}"}' \
@@ -38,6 +39,7 @@ pipeline {
                           ${VAULT_ADDR}/v1/pki/issue/internal-role \
                           -o /tmp/vault-cert.json
 
+                        set -x
                         jq -r .data.certificate /tmp/vault-cert.json > /tmp/client.crt
                         jq -r .data.private_key  /tmp/vault-cert.json > /tmp/client.key
                         jq -r .data.issuing_ca   /tmp/vault-cert.json > /tmp/ca.pem
