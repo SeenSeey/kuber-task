@@ -81,7 +81,7 @@ pipeline {
                     ],
                     vaultSecrets: [[
                         path: 'secret/registry/users',
-                        engineVersion: 2,
+                        engineVersion: 1,
                         secretValues: [
                             [envVar: 'WRITER_PASS', vaultKey: 'writer']
                         ]
