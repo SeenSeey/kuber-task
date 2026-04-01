@@ -2,10 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HOST   = "tcp://host.docker.internal:2376"
-        REGISTRY      = "host.docker.internal:5000"
+        DOCKER_HOST   = "tcp://172.17.0.1:2376"
+        REGISTRY      = "172.17.0.1:5000"
         IMAGE_NAME    = "myapp"
-        VAULT_ADDR = "https://172.17.0.1:8200"
+        VAULT_ADDR    = "https://172.17.0.1:8200"
+        VAULT_ROLE_ID = credentials('vault-role-id')
+        VAULT_SECRET_ID = credentials('vault-secret-id')
     }
 
     stages {
@@ -18,34 +20,35 @@ pipeline {
 
         stage('Get Client Cert from Vault') {
             steps {
-                withVault(
-                    configuration: [
-                        vaultUrl: "${VAULT_ADDR}",
-                        vaultCredentialId: 'vault-approle',
-                        engineVersion: 2,
-                        skipSslVerification: true
-                    ],
-                    vaultSecrets: []
-                ) {
-                    script {
-                        def certJson = sh(script: """
-                            curl -sk \
-                              -H "X-Vault-Token: \${VAULT_TOKEN}" \
-                              -X POST \
-                              -d '{"common_name":"jenkins.local","ttl":"1h"}' \
-                              \${VAULT_ADDR}/v1/pki/issue/internal-role
-                        """, returnStdout: true).trim()
+                script {
+                    // Получаем токен через AppRole вручную
+                    def loginResp = sh(script: """
+                        curl -sk \
+                        -X POST \
+                        -d '{"role_id":"${VAULT_ROLE_ID}","secret_id":"${VAULT_SECRET_ID}"}' \
+                        ${VAULT_ADDR}/v1/auth/approle/login
+                    """, returnStdout: true).trim()
 
-                        writeFile file: '/tmp/client.crt',
-                            text: sh(script: "echo '${certJson}' | jq -r .data.certificate",
-                                     returnStdout: true).trim()
-                        writeFile file: '/tmp/client.key',
-                            text: sh(script: "echo '${certJson}' | jq -r .data.private_key",
-                                     returnStdout: true).trim()
-                        writeFile file: '/tmp/ca.pem',
-                            text: sh(script: "echo '${certJson}' | jq -r .data.issuing_ca",
-                                     returnStdout: true).trim()
-                    }
+                    def vaultToken = sh(script: "echo '${loginResp}' | jq -r .auth.client_token",
+                                        returnStdout: true).trim()
+
+                    def certJson = sh(script: """
+                        curl -sk \
+                        -H "X-Vault-Token: ${vaultToken}" \
+                        -X POST \
+                        -d '{"common_name":"jenkins.local","ttl":"1h"}' \
+                        ${VAULT_ADDR}/v1/pki/issue/internal-role
+                    """, returnStdout: true).trim()
+
+                    writeFile file: '/tmp/client.crt',
+                        text: sh(script: "echo '${certJson}' | jq -r .data.certificate",
+                                returnStdout: true).trim()
+                    writeFile file: '/tmp/client.key',
+                        text: sh(script: "echo '${certJson}' | jq -r .data.private_key",
+                                returnStdout: true).trim()
+                    writeFile file: '/tmp/ca.pem',
+                        text: sh(script: "echo '${certJson}' | jq -r .data.issuing_ca",
+                                returnStdout: true).trim()
                 }
             }
         }
