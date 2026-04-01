@@ -21,34 +21,31 @@ pipeline {
         stage('Get Client Cert from Vault') {
             steps {
                 script {
-                    // Получаем токен через AppRole вручную
-                    def loginResp = sh(script: """
+                    sh """
                         curl -sk \
                         -X POST \
                         -d '{"role_id":"${VAULT_ROLE_ID}","secret_id":"${VAULT_SECRET_ID}"}' \
-                        ${VAULT_ADDR}/v1/auth/approle/login
-                    """, returnStdout: true).trim()
+                        ${VAULT_ADDR}/v1/auth/approle/login \
+                        -o /tmp/vault-login.json
+                    """
 
-                    def vaultToken = sh(script: "echo '${loginResp}' | jq -r .auth.client_token",
-                                        returnStdout: true).trim()
+                    sh """
+                        TOKEN=\$(jq -r .auth.client_token /tmp/vault-login.json)
 
-                    def certJson = sh(script: """
                         curl -sk \
-                        -H "X-Vault-Token: ${vaultToken}" \
+                        -H "X-Vault-Token: \$TOKEN" \
                         -X POST \
                         -d '{"common_name":"jenkins.local","ttl":"1h"}' \
-                        ${VAULT_ADDR}/v1/pki/issue/internal-role
-                    """, returnStdout: true).trim()
+                        ${VAULT_ADDR}/v1/pki/issue/internal-role \
+                        -o /tmp/vault-cert.json
 
-                    writeFile file: '/tmp/client.crt',
-                        text: sh(script: "echo '${certJson}' | jq -r .data.certificate",
-                                returnStdout: true).trim()
-                    writeFile file: '/tmp/client.key',
-                        text: sh(script: "echo '${certJson}' | jq -r .data.private_key",
-                                returnStdout: true).trim()
-                    writeFile file: '/tmp/ca.pem',
-                        text: sh(script: "echo '${certJson}' | jq -r .data.issuing_ca",
-                                returnStdout: true).trim()
+                        jq -r .data.certificate /tmp/vault-cert.json > /tmp/client.crt
+                        jq -r .data.private_key  /tmp/vault-cert.json > /tmp/client.key
+                        jq -r .data.issuing_ca   /tmp/vault-cert.json > /tmp/ca.pem
+
+                        # Чистим временные файлы с секретами
+                        rm -f /tmp/vault-login.json /tmp/vault-cert.json
+                    """
                 }
             }
         }
