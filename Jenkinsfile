@@ -146,11 +146,11 @@ pipeline {
         always {
             sh """
                 docker --tlsverify \
-                  --tlscacert=${SECRETS_PATH}/ca.pem \
-                  --tlscert=${SECRETS_PATH}/client.crt \
-                  --tlskey=${SECRETS_PATH}/client.key \
-                  -H ${DOCKER_HOST} \
-                  logout ${REGISTRY} || true
+                --tlscacert=/opt/vault-agent/secrets/ca.pem \
+                --tlscert=/opt/vault-agent/secrets/client.crt \
+                --tlskey=/opt/vault-agent/secrets/client.key \
+                -H tcp://172.17.0.1:2376 \
+                logout 172.17.0.1:5000 || true
             """
         }
     }
