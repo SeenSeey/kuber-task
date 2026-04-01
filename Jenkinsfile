@@ -76,7 +76,7 @@ pipeline {
                     configuration: [
                         vaultUrl: "${VAULT_ADDR}",
                         vaultCredentialId: 'vault-approle',
-                        engineVersion: 2,
+                        engineVersion: 1,
                         skipSslVerification: true
                     ],
                     vaultSecrets: [[
