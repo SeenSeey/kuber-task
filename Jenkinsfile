@@ -5,7 +5,7 @@ pipeline {
         DOCKER_HOST   = "tcp://host.docker.internal:2376"
         REGISTRY      = "host.docker.internal:5000"
         IMAGE_NAME    = "myapp"
-        VAULT_ADDR    = "https://host.docker.internal:8200"
+        VAULT_ADDR = "https://172.17.0.1:8200"
     }
 
     stages {
